@@ -1,0 +1,2 @@
+@props(['url','title'])
+<nav aria-label="共有" class="my-5 flex gap-4"><a class="underline" href="https://twitter.com/intent/tweet?{{ http_build_query(['text'=>$title,'url'=>$url], '', '&', PHP_QUERY_RFC3986) }}" target="_blank" rel="noopener noreferrer">Xで共有</a><a class="underline" href="https://www.facebook.com/sharer/sharer.php?{{ http_build_query(['u'=>$url], '', '&', PHP_QUERY_RFC3986) }}" target="_blank" rel="noopener noreferrer">Facebookで共有</a></nav>

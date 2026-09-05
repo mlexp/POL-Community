@@ -1,0 +1,8 @@
+<x-public-layout :title="$thread ? 'スレッド編集' : 'スレッド作成'"><h1 class="mb-5 text-2xl font-bold">{{ $thread ? 'スレッド編集' : 'スレッド作成' }}</h1><form class="space-y-4" method="POST" action="{{ $thread ? route('community.update',$thread) : route('community.store') }}">@csrf @if($thread)@method('PUT')@endif
+<label class="block">タイトル<input class="block w-full rounded border p-2" name="title" value="{{ old('title',$thread?->title) }}" maxlength="200" required></label>
+<label class="block">カテゴリ<select name="category_id" class="rounded border p-2">@foreach($categories as $category)<option value="{{ $category->id }}" @selected(old('category_id',$thread?->category_id)==$category->id)>{{ $category->name }}</option>@endforeach</select></label>
+<label class="block">公開範囲<select name="visibility" class="rounded border p-2">@foreach(['public'=>'公開','members'=>'メンバー限定','private'=>'非公開'] as $value=>$label)<option value="{{ $value }}" @selected(old('visibility',$thread?->visibility)===$value)>{{ $label }}</option>@endforeach</select></label>
+@if(!$thread)<x-rich-text-editor name="body_html" :value="old('body_html','')" />@else
+<label class="block">状態<select name="status" class="rounded border p-2">@foreach(['open'=>'受付中','closed'=>'受付終了'] + (auth()->user()->role==='admin'?['hidden'=>'非表示']:[]) as $value=>$label)<option value="{{ $value }}" @selected(old('status',$thread->status)===$value)>{{ $label }}</option>@endforeach</select></label>
+@if(auth()->user()->role==='admin')<label><input type="checkbox" name="is_pinned" value="1" @checked(old('is_pinned',$thread->is_pinned))> 先頭に固定</label>@endif
+@endif<button class="rounded bg-zinc-800 px-5 py-2 text-white">保存</button></form></x-public-layout>

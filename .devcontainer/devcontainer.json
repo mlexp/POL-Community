@@ -1,0 +1,23 @@
+{
+  "name": "PHP 8.3.32 + Apache 2.4.67 + MySQL 8.0",
+  "dockerComposeFile": "../compose.yaml",
+  "service": "app",
+  "runServices": ["app", "web", "db", "scheduler"],
+  "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
+  "updateRemoteUserUID": true,
+  "overrideCommand": false,
+  "shutdownAction": "stopCompose",
+  "mounts": [
+    "source=${localEnv:HOME}/.codex,target=/home/dev/.codex,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "ms-vscode.vscode-typescript-next",
+        "openai.chatgpt"
+      ]
+    }
+  }
+}

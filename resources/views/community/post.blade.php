@@ -1,0 +1,1 @@
+<x-public-layout title="投稿を編集"><h1 class="mb-5 text-2xl font-bold">投稿を編集</h1><form class="space-y-4" method="POST" action="{{ route('community-posts.update',$post) }}">@csrf @method('PUT')<x-rich-text-editor name="body_html" :value="old('body_html',$post->body_html)" /><button class="rounded bg-zinc-800 px-5 py-2 text-white">保存</button></form></x-public-layout>

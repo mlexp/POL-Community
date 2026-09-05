@@ -1,0 +1,5 @@
+@props(['title' => null])
+<!DOCTYPE html><html lang="ja"><head>@include('partials.head')</head><body class="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+<header class="border-b p-5"><div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4"><a class="text-xl font-bold" href="{{ route('home') }}">{{ app(\App\Support\SiteSettings::class)->get('site.title','POL Community') }}</a><nav class="flex flex-wrap gap-4"><a href="{{ route('diaries.index') }}">日記</a><a href="{{ route('community.index') }}">コミュニティ</a><a href="{{ route('search') }}">検索</a>@auth<a href="{{ route('dashboard') }}">マイページ</a>@else<a href="{{ route('login') }}">ログイン</a>@endauth</nav></div></header>
+<main class="mx-auto max-w-6xl p-5">@if(session('status'))<p class="my-3 rounded border p-3">{{ session('status') }}</p>@endif<x-content-errors />{{ $slot }}</main>
+<footer class="mx-auto max-w-6xl border-t p-5 text-sm">{{ app(\App\Support\SiteSettings::class)->get('site.footer_text','') }}</footer>@fluxScripts</body></html>

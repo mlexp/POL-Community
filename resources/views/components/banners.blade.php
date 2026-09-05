@@ -1,0 +1,2 @@
+@props(['banners'])
+<div class="my-5 space-y-5">@foreach($banners as $banner)@if(app(\App\Support\MediaUrl::class)->https($banner->destination_url))<a class="block" href="{{ $banner->destination_url }}" target="_blank" rel="noopener noreferrer{{ $banner->rel_sponsored ? ' sponsored' : '' }}"><img loading="lazy" class="max-h-64 rounded object-contain" src="{{ route('images.show',$banner->image_attachment_id) }}" alt="{{ $banner->alt_text }}"></a>@endif @endforeach</div>

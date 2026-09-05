@@ -1,0 +1,58 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - .:/workspace
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: app
+      DB_USERNAME: app
+      DB_PASSWORD: dev_password
+    depends_on:
+      db:
+        condition: service_healthy
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+
+  scheduler:
+    extends:
+      service: app
+    command: ["php", "artisan", "schedule:work"]
+    user: "1000:1000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./docker/apache
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - .:/workspace:ro
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: dev_root_password
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: dev_password
+    volumes:
+      - mysql80-data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=TCP -h 127.0.0.1 -u "$${MYSQL_USER}" "$${MYSQL_DATABASE}" -e 'SELECT 1'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  mysql80-data:
