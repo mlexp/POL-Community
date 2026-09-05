@@ -15,6 +15,7 @@ RUN apt-get update \
       libpng-dev \
       libjpeg62-turbo-dev \
       libwebp-dev \
+      openssh-client \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install pdo_mysql mysqli gd \
     && rm -rf /var/lib/apt/lists/*
