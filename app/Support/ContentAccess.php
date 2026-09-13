@@ -20,16 +20,16 @@ class ContentAccess
 
     public function diaries(?User $user): Builder
     {
-        return $this->visibility(DB::table('diaries')->whereNull('deleted_at')->where('status', 'published')->where('published_at', '<=', now()), $user);
+        return $this->visibility(DB::table('diaries')->whereNull('diaries.deleted_at')->where('diaries.status', 'published')->where('diaries.published_at', '<=', now())->whereExists(fn ($q) => $q->selectRaw('1')->from('users')->whereColumn('users.id', 'diaries.user_id')->whereNull('users.deleted_at')), $user, 'diaries.visibility');
     }
 
     public function threads(?User $user): Builder
     {
-        return $this->visibility(DB::table('community_threads')->whereNull('deleted_at')->whereIn('status', ['open', 'closed']), $user);
+        return $this->visibility(DB::table('community_threads')->whereNull('community_threads.deleted_at')->whereIn('community_threads.status', ['open', 'closed']), $user, 'community_threads.visibility');
     }
 
     public function announcements(?User $user): Builder
     {
-        return $this->visibility(DB::table('announcements')->whereNull('deleted_at')->where('status', 'published')->where('published_at', '<=', now()), $user);
+        return $this->visibility(DB::table('announcements')->whereNull('announcements.deleted_at')->where('announcements.status', 'published')->where('announcements.published_at', '<=', now()), $user, 'announcements.visibility');
     }
 }

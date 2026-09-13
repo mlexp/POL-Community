@@ -15,26 +15,26 @@ use Throwable;
 
 class ImageUpload
 {
-    public function store(UploadedFile $file, User $user, string $visibility = 'private'): Attachment
+    public function store(UploadedFile $file, User $user, string $visibility = 'private', ?string $purpose = null, string $validationKey = 'image'): Attachment
     {
         $limit = min((int) app(SiteSettings::class)->get('upload.image_max_bytes', 1048576), (int) config('content.image_hard_max_bytes'));
         if (! $file->isValid() || $file->getSize() > $limit || ! in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            $this->invalid();
+            $this->invalid($validationKey);
         }
         $bytes = file_get_contents($file->getPathname());
         if ($bytes === false) {
-            $this->invalid();
+            $this->invalid($validationKey);
         }
         $info = @getimagesizefromstring($bytes);
         if ($info === false || $info[0] < 1 || $info[1] < 1 || max($info[0], $info[1]) > config('content.image_max_dimension') || config('content.image_max_pixels') < $info[0] * $info[1]) {
-            $this->invalid();
+            $this->invalid($validationKey);
         }
         if (! function_exists('imagecreatefromstring')) {
-            throw ValidationException::withMessages(['image' => '画像処理拡張GDが未導入です。運用者に連絡してください。']);
+            throw ValidationException::withMessages([$validationKey => '画像処理拡張GDが未導入です。運用者に連絡してください。']);
         }
         $image = @imagecreatefromstring($bytes);
         if ($image === false) {
-            $this->invalid();
+            $this->invalid($validationKey);
         }
         $directory = 'users/'.$user->id.'/images/'.Str::ulid();
         $paths = [];
@@ -52,9 +52,9 @@ class ImageUpload
                 }
             }
 
-            return DB::transaction(function () use ($file, $user, $visibility, $directory, $original, $thumbnail, $info, $width, $height): Attachment {
+            return DB::transaction(function () use ($file, $user, $visibility, $purpose, $directory, $original, $thumbnail, $info, $width, $height): Attachment {
                 $path = $directory.'/original.webp';
-                $attachment = Attachment::create(['uploaded_by_user_id' => $user->id, 'disk' => 'local', 'path' => $path, 'path_hash' => hash('sha256', $path), 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'mime_type' => 'image/webp', 'extension' => 'webp', 'size_bytes' => strlen($original), 'width' => $info[0], 'height' => $info[1], 'sha256' => hash('sha256', $original), 'visibility' => $visibility, 'status' => 'ready']);
+                $attachment = Attachment::create(['uploaded_by_user_id' => $user->id, 'purpose' => $purpose, 'disk' => 'local', 'path' => $path, 'path_hash' => hash('sha256', $path), 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'mime_type' => 'image/webp', 'extension' => 'webp', 'size_bytes' => strlen($original), 'width' => $info[0], 'height' => $info[1], 'sha256' => hash('sha256', $original), 'visibility' => $visibility, 'status' => 'ready']);
                 $thumbPath = $directory.'/thumbnail.webp';
                 DB::table('attachment_variants')->insert(['id' => (string) Str::ulid(), 'attachment_id' => $attachment->id, 'variant' => 'thumbnail', 'disk' => 'local', 'path' => $thumbPath, 'path_hash' => hash('sha256', $thumbPath), 'mime_type' => 'image/webp', 'size_bytes' => strlen($thumbnail), 'width' => $width, 'height' => $height, 'created_at' => now(), 'updated_at' => now()]);
 
@@ -97,8 +97,8 @@ class ImageUpload
         }
     }
 
-    private function invalid(): never
+    private function invalid(string $validationKey): never
     {
-        throw ValidationException::withMessages(['image' => 'JPEG・PNG・WebP画像を指定し、サイズ・寸法上限を確認してください。']);
+        throw ValidationException::withMessages([$validationKey => 'JPEG・PNG・WebP画像を指定し、サイズ・寸法上限を確認してください。']);
     }
 }

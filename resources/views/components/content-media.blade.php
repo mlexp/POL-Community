@@ -10,6 +10,6 @@ $media = app(\App\Services\ContentMedia::class)->listing($type,$id);
 $src = null;
 try { $src = app(\App\Support\MediaUrl::class)->video($video->original_url)['src']; } catch (\Illuminate\Validation\ValidationException) {}
 @endphp
-@if($src)<iframe class="aspect-video w-full rounded" src="{{ $src }}" title="{{ $video->provider }} 動画" loading="lazy" referrerpolicy="no-referrer" allow="fullscreen; encrypted-media; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>@endif
+@if($src)<iframe class="aspect-video w-full rounded" src="{{ $src }}" title="{{ $video->provider }} 動画" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; encrypted-media; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>@endif
 @endforeach
 </div>

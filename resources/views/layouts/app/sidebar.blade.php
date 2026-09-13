@@ -6,27 +6,29 @@
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <x-app-logo :sidebar="true" href="{{ route('characters.mine') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                    <flux:sidebar.item icon="user" :href="route('characters.mine')" :current="request()->routeIs('characters.mine')">
+                        マイキャラクター
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="user" :href="route('characters.index')" :current="request()->routeIs('characters.*')">
-                        キャラクター
+                    <flux:sidebar.item icon="document-text" :href="route('diaries.mine')" :current="request()->routeIs('diaries.mine')">
+                        自分の日記
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="document-text" :href="route('diaries.index')" :current="request()->routeIs('diaries.*')">
-                        日記
-                    </flux:sidebar.item>
+                    <flux:separator class="my-2" />
                     <flux:sidebar.item icon="home" :href="route('home')">トップ</flux:sidebar.item>
+                    <flux:sidebar.item icon="document-text" :href="route('diaries.index')" :current="request()->routeIs('diaries.index')">
+                        メンバー日記
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="chat-bubble-left-right" :href="route('community.index')">コミュニティ</flux:sidebar.item>
-                    <flux:sidebar.item icon="magnifying-glass" :href="route('search')">横断検索</flux:sidebar.item>
+                    <flux:sidebar.item icon="magnifying-glass" :href="route('search')">検索</flux:sidebar.item>
                     @if(auth()->user()->role === 'admin')
+                        <flux:separator class="my-2" />
                         <flux:sidebar.item icon="cog" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')">
-                            管理
+                            サイト管理
                         </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
@@ -34,7 +36,7 @@
 
             <flux:spacer />
 
-            <flux:sidebar.nav>
+            @if(auth()->user()->role === 'admin')<flux:sidebar.nav>
                 <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
                     {{ __('Repository') }}
                 </flux:sidebar.item>
@@ -42,7 +44,7 @@
                 <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
                     {{ __('Documentation') }}
                 </flux:sidebar.item>
-            </flux:sidebar.nav>
+            </flux:sidebar.nav>@endif
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->display_name" />
         </flux:sidebar>
@@ -56,6 +58,7 @@
             <flux:dropdown position="top" align="end">
                 <flux:profile
                     :initials="auth()->user()->initials()"
+                    :avatar="app(\App\Support\AvatarUrl::class)->user(auth()->user())"
                     icon-trailing="chevron-down"
                 />
 

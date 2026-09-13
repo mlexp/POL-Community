@@ -2,6 +2,7 @@
     <flux:sidebar.profile
         :name="auth()->user()->display_name"
         :initials="auth()->user()->initials()"
+        :avatar="app(\App\Support\AvatarUrl::class)->user(auth()->user())"
         icon:trailing="chevrons-up-down"
         data-test="sidebar-menu-button"
     />

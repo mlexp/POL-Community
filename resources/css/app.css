@@ -61,6 +61,13 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+@layer components {
+    button:not([data-flux-button]):not([data-flux-sidebar-profile]):not([data-flux-profile]):not([data-flux-menu-item]):not([data-flux-sidebar-toggle]):not([data-rich-text-control]):not([data-rich-text-swatch]):not([class*='text-red-']):not([class*='bg-red-']),
+    a.rounded.border {
+        @apply !bg-zinc-900 !text-white hover:!bg-zinc-800;
+    }
+}
+
 .rich-text-content h2 { @apply my-4 text-2xl font-semibold; }
 .rich-text-content h3 { @apply my-3 text-xl font-semibold; }
 .rich-text-content p { @apply my-3; }
@@ -69,6 +76,76 @@ select:focus[data-flux-control] {
 .rich-text-content blockquote { @apply my-3 border-l-4 border-zinc-300 pl-4 text-zinc-600; }
 .rich-text-content a { @apply text-blue-700 underline; }
 .rich-text-content pre { @apply my-3 overflow-x-auto rounded bg-zinc-900 p-3 text-zinc-100; }
+.rich-text-content u { text-decoration: underline; }
+.rich-text-content s,
+.rich-text-content strike,
+.rich-text-content del { text-decoration: line-through; }
+.rich-text-content sup { font-size: 0.75em; vertical-align: super; }
+.rich-text-content sub { font-size: 0.75em; vertical-align: sub; }
+.rich-text-content big { font-size: 1.25em; }
+.rich-text-content small { font-size: 0.8em; }
+.rich-text-content [align="left"] { text-align: left; }
+.rich-text-content [align="center"] { text-align: center; }
+.rich-text-content [align="right"] { text-align: right; }
+
+[data-swatch="FFFFFF"], .rich-text-content [data-text-color="FFFFFF"] { color: #fff; }
+[data-swatch="000000"], .rich-text-content [data-text-color="000000"] { color: #000; }
+[data-swatch="C0C0C0"], .rich-text-content [data-text-color="C0C0C0"] { color: #c0c0c0; }
+[data-swatch="808080"], .rich-text-content [data-text-color="808080"] { color: #808080; }
+[data-swatch="FF0000"], .rich-text-content [data-text-color="FF0000"] { color: #f00; }
+[data-swatch="800000"], .rich-text-content [data-text-color="800000"] { color: #800000; }
+[data-swatch="FFFF00"], .rich-text-content [data-text-color="FFFF00"] { color: #ff0; }
+[data-swatch="808000"], .rich-text-content [data-text-color="808000"] { color: #808000; }
+[data-swatch="00FF00"], .rich-text-content [data-text-color="00FF00"] { color: #0f0; }
+[data-swatch="008000"], .rich-text-content [data-text-color="008000"] { color: #008000; }
+[data-swatch="00FFFF"], .rich-text-content [data-text-color="00FFFF"] { color: #0ff; }
+[data-swatch="008080"], .rich-text-content [data-text-color="008080"] { color: #008080; }
+[data-swatch="0000FF"], .rich-text-content [data-text-color="0000FF"] { color: #00f; }
+[data-swatch="000080"], .rich-text-content [data-text-color="000080"] { color: #000080; }
+[data-swatch="FF00FF"], .rich-text-content [data-text-color="FF00FF"] { color: #f0f; }
+[data-swatch="800080"], .rich-text-content [data-text-color="800080"] { color: #800080; }
+
+[data-swatch="FFD1D1"], .rich-text-content [data-background-color="FFD1D1"] { background-color: #ffd1d1; }
+[data-swatch="FFD1E8"], .rich-text-content [data-background-color="FFD1E8"] { background-color: #ffd1e8; }
+[data-swatch="FFD1FF"], .rich-text-content [data-background-color="FFD1FF"] { background-color: #ffd1ff; }
+[data-swatch="E8D1FF"], .rich-text-content [data-background-color="E8D1FF"] { background-color: #e8d1ff; }
+[data-swatch="D1D1FF"], .rich-text-content [data-background-color="D1D1FF"] { background-color: #d1d1ff; }
+[data-swatch="D1E8FF"], .rich-text-content [data-background-color="D1E8FF"] { background-color: #d1e8ff; }
+[data-swatch="D1FFFF"], .rich-text-content [data-background-color="D1FFFF"] { background-color: #d1ffff; }
+[data-swatch="D1FFE8"], .rich-text-content [data-background-color="D1FFE8"] { background-color: #d1ffe8; }
+[data-swatch="D1FFD1"], .rich-text-content [data-background-color="D1FFD1"] { background-color: #d1ffd1; }
+[data-swatch="E8FFD1"], .rich-text-content [data-background-color="E8FFD1"] { background-color: #e8ffd1; }
+[data-swatch="FFFFD1"], .rich-text-content [data-background-color="FFFFD1"] { background-color: #ffffd1; }
+[data-swatch="FFE8D1"], .rich-text-content [data-background-color="FFE8D1"] { background-color: #ffe8d1; }
+
+[data-rich-text-swatch][data-swatch="FFFFFF"] { background-color: #fff; }
+[data-rich-text-swatch][data-swatch="000000"] { background-color: #000; }
+[data-rich-text-swatch][data-swatch="C0C0C0"] { background-color: #c0c0c0; }
+[data-rich-text-swatch][data-swatch="808080"] { background-color: #808080; }
+[data-rich-text-swatch][data-swatch="FF0000"] { background-color: #f00; }
+[data-rich-text-swatch][data-swatch="800000"] { background-color: #800000; }
+[data-rich-text-swatch][data-swatch="FFFF00"] { background-color: #ff0; }
+[data-rich-text-swatch][data-swatch="808000"] { background-color: #808000; }
+[data-rich-text-swatch][data-swatch="00FF00"] { background-color: #0f0; }
+[data-rich-text-swatch][data-swatch="008000"] { background-color: #008000; }
+[data-rich-text-swatch][data-swatch="00FFFF"] { background-color: #0ff; }
+[data-rich-text-swatch][data-swatch="008080"] { background-color: #008080; }
+[data-rich-text-swatch][data-swatch="0000FF"] { background-color: #00f; }
+[data-rich-text-swatch][data-swatch="000080"] { background-color: #000080; }
+[data-rich-text-swatch][data-swatch="FF00FF"] { background-color: #f0f; }
+[data-rich-text-swatch][data-swatch="800080"] { background-color: #800080; }
+[data-rich-text-swatch][data-swatch="FFD1D1"] { background-color: #ffd1d1; }
+[data-rich-text-swatch][data-swatch="FFD1E8"] { background-color: #ffd1e8; }
+[data-rich-text-swatch][data-swatch="FFD1FF"] { background-color: #ffd1ff; }
+[data-rich-text-swatch][data-swatch="E8D1FF"] { background-color: #e8d1ff; }
+[data-rich-text-swatch][data-swatch="D1D1FF"] { background-color: #d1d1ff; }
+[data-rich-text-swatch][data-swatch="D1E8FF"] { background-color: #d1e8ff; }
+[data-rich-text-swatch][data-swatch="D1FFFF"] { background-color: #d1ffff; }
+[data-rich-text-swatch][data-swatch="D1FFE8"] { background-color: #d1ffe8; }
+[data-rich-text-swatch][data-swatch="D1FFD1"] { background-color: #d1ffd1; }
+[data-rich-text-swatch][data-swatch="E8FFD1"] { background-color: #e8ffd1; }
+[data-rich-text-swatch][data-swatch="FFFFD1"] { background-color: #ffffd1; }
+[data-rich-text-swatch][data-swatch="FFE8D1"] { background-color: #ffe8d1; }
 
 /* \[:where(&)\]:size-4 {
     @apply size-4;

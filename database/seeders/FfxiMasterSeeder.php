@@ -26,6 +26,9 @@ class FfxiMasterSeeder extends Seeder
             ['bastok', 'バストゥーク共和国', 'Republic of Bastok'],
             ['windurst', 'ウィンダス連邦', 'Federation of Windurst'],
         ]);
+        foreach (['sandoria' => 'assets/ffxi/flags/ffxi_flg_01.jpg', 'bastok' => 'assets/ffxi/flags/ffxi_flg_02.jpg', 'windurst' => 'assets/ffxi/flags/ffxi_flg_03.jpg'] as $code => $path) {
+            DB::table('ffxi_nations')->where('code', $code)->update(['flag_path' => $path]);
+        }
 
         $this->seedMaster('ffxi_races', [
             ['hume', 'ヒューム', 'Hume'], ['elvaan', 'エルヴァーン', 'Elvaan'],
@@ -53,22 +56,28 @@ class FfxiMasterSeeder extends Seeder
 
         $raceIds = DB::table('ffxi_races')->pluck('id', 'code');
         $faces = [];
+        $genders = ['hume' => ['male', 'female'], 'elvaan' => ['male', 'female'], 'tarutaru' => ['male', 'female'], 'mithra' => ['female'], 'galka' => ['male']];
+        $prefixes = ['hume:male' => 'h', 'hume:female' => 'hh', 'elvaan:male' => 'e', 'elvaan:female' => 'ee', 'tarutaru:male' => 't', 'tarutaru:female' => 'tt', 'mithra:female' => 'm', 'galka:male' => 'g'];
         foreach ($raceIds as $raceCode => $raceId) {
-            foreach (range(1, 8) as $number) {
-                foreach (['a', 'b'] as $variant) {
-                    $code = $number.$variant;
-                    $faces[] = [
-                        'race_id' => $raceId,
-                        'face_code' => $code,
-                        'name_ja' => strtoupper($raceCode).' '.strtoupper($code),
-                        'name_en' => strtoupper($raceCode).' '.strtoupper($code),
-                        'sort_order' => (($number - 1) * 2) + ($variant === 'a' ? 1 : 2),
-                        'is_active' => true,
-                    ];
+            foreach ($genders[$raceCode] as $gender) {
+                foreach (range(1, 8) as $number) {
+                    foreach (['a', 'b'] as $variant) {
+                        $code = $number.$variant;
+                        $faces[] = [
+                            'race_id' => $raceId,
+                            'gender' => $gender,
+                            'face_code' => $code,
+                            'name_ja' => strtoupper($raceCode).' '.($gender === 'male' ? '男性' : '女性').' '.strtoupper($code),
+                            'name_en' => strtoupper($raceCode).' '.ucfirst($gender).' '.strtoupper($code),
+                            'image_path' => 'assets/ffxi/faces/'.$prefixes[$raceCode.':'.$gender].$number.'_'.$variant.'.jpg',
+                            'sort_order' => (($number - 1) * 2) + ($variant === 'a' ? 1 : 2),
+                            'is_active' => true,
+                        ];
+                    }
                 }
             }
         }
-        DB::table('ffxi_face_types')->upsert($faces, ['race_id', 'face_code'], ['name_ja', 'name_en', 'sort_order', 'is_active']);
+        DB::table('ffxi_face_types')->upsert($faces, ['race_id', 'gender', 'face_code'], ['name_ja', 'name_en', 'image_path', 'sort_order', 'is_active']);
     }
 
     /** @param array<int, array{0: string, 1: string, 2?: string}> $values */

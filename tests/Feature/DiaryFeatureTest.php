@@ -24,7 +24,19 @@ class DiaryFeatureTest extends TestCase
         $user = User::factory()->create();
         $category = DB::table('diary_categories')->where('slug', 'uncategorized')->first();
 
-        $this->actingAs($user)->get(route('diaries.create'))->assertOk();
+        $this->actingAs($user)->get(route('diaries.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['見出し', '右寄せ', '中央寄せ', '左寄せ', '文字を大きく', '文字を小さく', '太字', '斜体', 'アンダーライン', '取り消し線', '上付き', '下付き', '文字色', '背景色', '箇条書き', '番号', '書式解除', 'リンク', 'リンク解除'])
+            ->assertSee('role="separator" aria-orientation="vertical"', false)
+            ->assertSee('data-rich-text-control data-command="formatBlock"', false)
+            ->assertSee('src="'.asset('assets/editor/title_24dp_1F1F1F.svg').'" alt="見出し"', false)
+            ->assertSee('src="'.asset('assets/editor/format_color_text_24dp_1F1F1F.svg').'" alt="文字色"', false)
+            ->assertSee('src="'.asset('assets/editor/link_off_24dp_1F1F1F.svg').'" alt="リンク解除"', false)
+            ->assertSee('aria-label="文字色 #FF0000"', false)
+            ->assertSee('aria-label="背景色 #FFD1D1"', false)
+            ->assertSee('<details data-rich-text-palette class="relative">', false)
+            ->assertSee('class="absolute z-10 mt-1 grid w-36 grid-cols-4 gap-1', false)
+            ->assertSee('class="h-7 w-7 shrink-0 rounded border border-zinc-400"', false);
 
         $response = $this->post(route('diaries.store'), [
             'title' => '冒険日記',
@@ -46,6 +58,29 @@ class DiaryFeatureTest extends TestCase
         $this->assertDatabaseHas('diary_category', ['diary_id' => $diary->id, 'diary_category_id' => $category->id]);
     }
 
+    public function test_public_diary_index_keeps_the_public_header_and_my_diaries_uses_the_sidebar(): void
+    {
+        $member = User::factory()->create();
+        $ownDiary = $this->diary($member, ['title' => '自分の投稿', 'body_html' => '<p>自分の本文</p>', 'excerpt' => '自分の本文']);
+        $otherDiary = $this->diary(User::factory()->create(), ['title' => 'ほかの投稿', 'body_html' => '<p>ほかの本文</p>', 'excerpt' => 'ほかの本文']);
+
+        $this->actingAs($member)->get(route('diaries.index'))
+            ->assertOk()
+            ->assertSee('placeholder="日記・コミュニティ・更新情報を検索"', false)
+            ->assertDontSee('マイキャラクター')
+            ->assertSee($ownDiary->title)
+            ->assertSee($otherDiary->title)
+            ->assertDontSee('自分の本文')
+            ->assertDontSee('ほかの本文');
+
+        $this->get(route('diaries.mine'))
+            ->assertOk()
+            ->assertSeeInOrder(['マイキャラクター', '自分の日記', 'トップ', 'メンバー日記', 'コミュニティ'])
+            ->assertSee($ownDiary->title)
+            ->assertDontSee('自分の本文')
+            ->assertDontSee($otherDiary->title);
+    }
+
     public function test_draft_and_private_diary_visibility_is_enforced(): void
     {
         $owner = User::factory()->create();
@@ -55,7 +90,10 @@ class DiaryFeatureTest extends TestCase
 
         $this->get(route('diaries.show', $draft))->assertNotFound();
         $this->actingAs($other)->get(route('diaries.show', $private))->assertForbidden();
-        $this->actingAs($owner)->get(route('diaries.show', $draft))->assertOk();
+        $this->actingAs($owner)->get(route('diaries.show', $draft))
+            ->assertOk()
+            ->assertSee('class="self-start rounded bg-zinc-900 px-5 py-2 text-white"', false)
+            ->assertSee('href="'.route('diaries.edit', $draft).'">編集</a>', false);
     }
 
     public function test_member_cannot_edit_another_members_diary(): void

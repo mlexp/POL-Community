@@ -1,3 +1,3 @@
-<x-layouts::app :title="$mine ? '自分の日記' : '日記'"><div class="p-6"><div class="mb-6 flex flex-wrap items-center justify-between gap-3"><h1 class="text-2xl font-semibold">{{ $mine ? '自分の日記' : '日記' }}</h1>@auth<div class="flex gap-3"><a class="underline" href="{{ $mine ? route('diaries.index') : route('diaries.mine') }}">{{ $mine ? '公開日記' : '自分の日記' }}</a><a class="rounded bg-zinc-900 px-4 py-2 text-white" href="{{ route('diaries.create') }}">日記を書く</a></div>@endauth</div>
-@if(session('status'))<div class="mb-4 rounded bg-green-50 p-3 text-green-900">{{ session('status') }}</div>@endif
-<div class="space-y-4">@forelse($diaries as $diary)<article class="rounded border p-4"><div class="flex justify-between gap-3"><h2 class="text-xl font-medium"><a class="underline" href="{{ route('diaries.show',$diary) }}">{{ $diary->title }}</a></h2><span class="text-xs">{{ $diary->status }} / {{ $diary->visibility }}</span></div><p class="mt-2 text-sm text-zinc-600">{{ $diary->excerpt }}</p><p class="mt-3 text-xs text-zinc-500">{{ $diary->user?->display_name }} @if($diary->character) / {{ $diary->character->name }}@endif · {{ $diary->published_at ?? $diary->updated_at }}</p></article>@empty<p>日記はありません。</p>@endforelse</div><div class="mt-6">{{ $diaries->links() }}</div></div></x-layouts::app>
+<x-public-layout title="メンバー日記">
+    @include('diaries._index')
+</x-public-layout>

@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CommunityPost;
 use App\Models\CommunityThread;
+use App\Services\ContentMedia;
+use App\Services\ImageUpload;
 use App\Support\AuditLogger;
 use App\Support\ContentAccess;
 use App\Support\ContentSanitizer;
+use App\Support\UpdateTimestamp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +31,10 @@ class CommunityController extends Controller
         if (isset($data['category'])) {
             $query->where('category_id', $data['category']);
         }
+        $firstPost = fn () => DB::table('community_posts')->select('body_html')->whereColumn('thread_id', 'community_threads.id')->where('status', 'visible')->whereNull('deleted_at')->orderBy('created_at')->orderBy('id')->limit(1);
+        $firstPostId = fn () => DB::table('community_posts')->select('id')->whereColumn('thread_id', 'community_threads.id')->where('status', 'visible')->whereNull('deleted_at')->orderBy('created_at')->orderBy('id')->limit(1);
+        $firstPostAuthor = fn () => DB::table('community_posts')->select('author_name_snapshot')->whereColumn('thread_id', 'community_threads.id')->where('status', 'visible')->whereNull('deleted_at')->orderBy('created_at')->orderBy('id')->limit(1);
+        $query->addSelect(['preview_body_html' => $firstPost(), 'preview_post_id' => $firstPostId(), 'thread_author' => $firstPostAuthor()]);
 
         return view('community.index', ['threads' => $query->orderByDesc('is_pinned')->orderByDesc('last_posted_at')->orderByDesc('id')->paginate(20)->withQueryString(), 'categories' => DB::table('community_categories')->orderBy('sort_order')->get()]);
     }
@@ -39,14 +46,16 @@ class CommunityController extends Controller
         return view('community.form', ['thread' => null, 'categories' => DB::table('community_categories')->where('is_active', true)->orderBy('sort_order')->get()]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ContentMedia $media, ImageUpload $upload): RedirectResponse
     {
         Gate::authorize('create', CommunityThread::class);
         $data = $this->threadData($request);
         $body = $this->body($request);
-        $thread = DB::transaction(function () use ($request, $data, $body) {
+        $mediaData = $media->validatePending($request);
+        $thread = DB::transaction(function () use ($request, $data, $body, $mediaData, $media, $upload) {
             $thread = CommunityThread::create([...$data, 'created_by_user_id' => $request->user()->id, 'status' => 'open', 'last_posted_at' => now(), 'post_count' => 1]);
-            CommunityPost::create(['thread_id' => $thread->id, 'user_id' => $request->user()->id, 'author_name_snapshot' => $request->user()->display_name, 'body_html' => $body, 'status' => 'visible']);
+            $post = CommunityPost::create(['thread_id' => $thread->id, 'user_id' => $request->user()->id, 'author_name_snapshot' => $request->user()->display_name, 'body_html' => $body, 'status' => 'visible']);
+            $media->attachPending($mediaData, $request->user(), 'community_post', $post->id, $thread->visibility, $upload);
 
             return $thread;
         });
@@ -68,7 +77,7 @@ class CommunityController extends Controller
         return view('community.form', ['thread' => $thread, 'categories' => DB::table('community_categories')->where('is_active', true)->orderBy('sort_order')->get()]);
     }
 
-    public function update(Request $request, CommunityThread $thread, AuditLogger $audit): RedirectResponse
+    public function update(Request $request, CommunityThread $thread, AuditLogger $audit, UpdateTimestamp $timestamp): RedirectResponse
     {
         Gate::authorize('update', $thread);
         $data = $this->threadData($request);
@@ -76,7 +85,7 @@ class CommunityController extends Controller
         if ($request->user()->role === 'admin') {
             $data['is_pinned'] = $request->boolean('is_pinned');
         }
-        $thread->update($data);
+        $timestamp->update($request, $thread, $data);
         $audit->log($request, 'community_thread.updated', $thread, null, $data);
 
         return redirect()->route('community.show', $thread);
@@ -91,14 +100,16 @@ class CommunityController extends Controller
         return redirect()->route('community.index');
     }
 
-    public function reply(Request $request, CommunityThread $thread): RedirectResponse
+    public function reply(Request $request, CommunityThread $thread, ContentMedia $media, ImageUpload $upload): RedirectResponse
     {
         Gate::authorize('reply', $thread);
         $body = $this->body($request);
-        $reply = DB::transaction(function () use ($request, $thread, $body): CommunityPost {
+        $mediaData = $media->validatePending($request);
+        $reply = DB::transaction(function () use ($request, $thread, $body, $mediaData, $media, $upload): CommunityPost {
             $locked = CommunityThread::whereKey($thread->id)->lockForUpdate()->firstOrFail();
             Gate::authorize('reply', $locked);
             $reply = CommunityPost::create(['thread_id' => $locked->id, 'user_id' => $request->user()->id, 'author_name_snapshot' => $request->user()->display_name, 'body_html' => $body, 'status' => 'visible']);
+            $media->attachPending($mediaData, $request->user(), 'community_post', $reply->id, $locked->visibility, $upload);
             $this->recount($locked);
 
             return $reply;
@@ -119,10 +130,10 @@ class CommunityController extends Controller
         return view('community.post', compact('post'));
     }
 
-    public function updatePost(Request $request, CommunityPost $post): RedirectResponse
+    public function updatePost(Request $request, CommunityPost $post, UpdateTimestamp $timestamp): RedirectResponse
     {
         Gate::authorize('update', $post);
-        $post->update(['body_html' => $this->body($request)]);
+        $timestamp->update($request, $post, ['body_html' => $this->body($request)]);
 
         return redirect()->route('community.show', $post->thread_id);
     }

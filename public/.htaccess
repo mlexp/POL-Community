@@ -4,6 +4,8 @@
     </IfModule>
 
     RewriteEngine On
+    # RewriteBase を明示する
+    RewriteBase /wk/
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .

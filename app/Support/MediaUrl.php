@@ -37,7 +37,7 @@ class MediaUrl
             }
         }
         if (preg_match('/^[A-Za-z0-9_-]{11}$/D', $id)) {
-            return ['provider' => 'youtube', 'video_id' => $id, 'src' => 'https://www.youtube-nocookie.com/embed/'.$id];
+            return ['provider' => 'youtube', 'video_id' => $id, 'src' => 'https://www.youtube.com/embed/'.$id];
         }
         if (in_array($host, ['www.nicovideo.jp', 'nicovideo.jp'], true) && preg_match('~^/watch/((?:sm|nm|so)[0-9]{1,12})$~D', $path, $m)) {
             return ['provider' => 'niconico', 'video_id' => $m[1], 'src' => 'https://embed.nicovideo.jp/watch/'.$m[1]];

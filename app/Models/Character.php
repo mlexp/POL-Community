@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['user_id', 'game_id', 'name', 'is_primary', 'profile_text', 'visibility'])]
+#[Fillable(['user_id', 'game_id', 'name', 'is_primary', 'profile_text', 'short_message', 'avatar_attachment_id', 'visibility'])]
 class Character extends Model
 {
     use HasUlidPrimaryKey, SoftDeletes;

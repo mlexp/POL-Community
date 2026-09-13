@@ -10,6 +10,9 @@ class DiaryPolicy
 {
     public function view(?User $user, Diary $diary): bool
     {
+        if (! User::query()->whereKey($diary->user_id)->exists()) {
+            return false;
+        }
         $member = app(ContentAccess::class)->member($user);
         if ($member && ($user?->id === $diary->user_id || $user?->role === 'admin')) {
             return true;

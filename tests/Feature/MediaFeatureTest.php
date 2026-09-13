@@ -78,12 +78,26 @@ class MediaFeatureTest extends TestCase
         $this->post(route('media.store', ['diary', $diary->id]), ['kind' => 'video', 'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'])->assertSessionHasNoErrors()->assertRedirect();
         $this->post(route('media.store', ['diary', $diary->id]), ['kind' => 'video', 'url' => 'https://www.nicovideo.jp/watch/sm12345'])->assertSessionHasNoErrors()->assertRedirect();
         $this->post(route('media.store', ['diary', $diary->id]), ['kind' => 'video', 'url' => 'https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ'])->assertSessionHasErrors('url');
-        $response = $this->get(route('diaries.show', $diary))->assertOk()->assertSee('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', false)->assertSee('https://embed.nicovideo.jp/watch/sm12345', false)->assertSee('referrerpolicy="no-referrer"', false);
+        $response = $this->get(route('diaries.show', $diary))->assertOk()->assertSee('https://www.youtube.com/embed/dQw4w9WgXcQ', false)->assertSee('https://embed.nicovideo.jp/watch/sm12345', false)->assertSee('referrerpolicy="strict-origin-when-cross-origin"', false);
+        $this->assertStringContainsString("img-src 'self' https: data: blob:", $response->headers->get('Content-Security-Policy'));
         $this->assertStringContainsString("object-src 'none'", $response->headers->get('Content-Security-Policy'));
-        $this->assertStringContainsString('frame-src https://www.youtube-nocookie.com https://embed.nicovideo.jp', $response->headers->get('Content-Security-Policy'));
+        $this->assertStringContainsString('frame-src https://www.youtube.com https://www.youtube-nocookie.com https://embed.nicovideo.jp', $response->headers->get('Content-Security-Policy'));
         $videoId = DB::table('video_embeds')->where('provider', 'youtube')->value('id');
         $this->delete(route('media.destroy', ['diary', $diary->id, 'video', $videoId]))->assertRedirect();
-        $this->get(route('diaries.show', $diary))->assertDontSee('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', false);
+        $this->get(route('diaries.show', $diary))->assertDontSee('https://www.youtube.com/embed/dQw4w9WgXcQ', false);
+    }
+
+    public function test_media_can_be_attached_while_creating_a_diary(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('diaries.store'), [
+            'title' => '添付付き日記', 'body_html' => '<p>本文</p>', 'visibility' => 'public', 'status' => 'published', 'comments_enabled' => '1',
+            'media_video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertDatabaseHas('video_embeds', ['provider' => 'youtube', 'video_id' => 'dQw4w9WgXcQ']);
+        $this->assertDatabaseCount('embeddables', 1);
     }
 
     public function test_hidden_community_post_revokes_image_access_and_media_cannot_be_attached_by_others(): void
@@ -102,15 +116,103 @@ class MediaFeatureTest extends TestCase
     public function test_admin_header_and_banner_uploads_and_home_visibility(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('<h1 class="my-5 text-3xl font-bold">POL Community</h1>', false);
         $this->actingAs($admin)->post(route('admin.images.store'), ['image' => UploadedFile::fake()->image('header.png'), 'slot' => 'header', 'alt_text' => 'サイトヘッダー'])->assertRedirect();
         $image = Attachment::sole();
+        $this->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('id="header-image-preview" class="max-h-48', false)
+            ->assertSee('src="'.route('images.show', [$image->id, 'thumbnail']).'"', false);
         auth()->logout();
-        $this->get('/')->assertOk()->assertSee('サイトヘッダー');
+        $this->get('/')
+            ->assertOk()
+            ->assertDontSee('<h1 class="my-5 text-3xl font-bold">POL Community</h1>', false)
+            ->assertSee('alt="POL Community"', false)
+            ->assertDontSee('alt="サイトヘッダー"', false);
         $this->get(route('images.show', $image))->assertOk();
-        $this->actingAs($admin)->post(route('admin.banners.store'), ['name' => 'バナー', 'image_attachment_id' => $image->id, 'destination_url' => 'https://example.com', 'alt_text' => '広告テスト', 'placement' => 'home_sidebar', 'sort_order' => 0, 'is_enabled' => 1, 'rel_sponsored' => 1])->assertRedirect();
-        $this->get('/')->assertSee('広告テスト')->assertSee('noopener noreferrer sponsored');
+        $this->actingAs($admin)->post(route('admin.images.store'), ['image' => UploadedFile::fake()->image('banner.png'), 'purpose' => 'banner'])->assertRedirect();
+        $bannerImage = Attachment::query()->where('purpose', 'banner')->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.banners.store'), ['name' => 'バナー', 'image_attachment_id' => $bannerImage->id, 'destination_url' => 'https://example.com', 'alt_text' => '広告テスト', 'placement' => 'home_sidebar', 'sort_order' => 0, 'is_enabled' => 1, 'rel_sponsored' => 1])->assertRedirect();
+        $banner = DB::table('banners')->first();
+        $this->get(route('admin.banners'))
+            ->assertOk()
+            ->assertSee('form="banner-delete-'.$banner->id.'"', false)
+            ->assertSee('class="ml-auto rounded border border-red-700 px-3 py-1 text-red-700"', false)
+            ->assertSee('id="banner-delete-'.$banner->id.'" class="hidden"', false);
+        $this->get('/')
+            ->assertSee('広告テスト')
+            ->assertSee('noopener noreferrer sponsored')
+            ->assertSee('class="my-5 space-y-5 flex flex-col items-end"', false)
+            ->assertSee('class="h-auto rounded max-w-[min(360px,100%)]"', false)
+            ->assertDontSee('max-h-64');
+        DB::table('banners')->update(['placement' => 'home_header']);
+        $this->get('/')
+            ->assertSee('class="my-5 space-y-5 flex flex-col items-center"', false)
+            ->assertSee('class="h-auto rounded max-w-full"', false)
+            ->assertDontSee('max-w-none');
         DB::table('banners')->update(['starts_at' => now()->addDay()]);
         $this->get('/')->assertDontSee('広告テスト');
+    }
+
+    public function test_admin_can_create_and_update_a_banner_with_a_newly_uploaded_image(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $payload = [
+            'name' => 'アップロードバナー',
+            'destination_url' => 'https://example.com/banner',
+            'alt_text' => 'アップロード画像',
+            'placement' => 'home_sidebar',
+            'sort_order' => 0,
+            'is_enabled' => 1,
+            'rel_sponsored' => 0,
+        ];
+
+        $this->actingAs($admin)->post(route('admin.banners.store'), [
+            ...$payload,
+            'image' => UploadedFile::fake()->image('new-banner.png'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $banner = DB::table('banners')->first();
+        $this->assertNotNull($banner);
+        $this->assertDatabaseHas('attachments', ['id' => $banner->image_attachment_id, 'purpose' => 'banner']);
+
+        $this->put(route('admin.banners.update', $banner->id), [
+            ...$payload,
+            'image' => UploadedFile::fake()->image('replacement-banner.png'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertNotSame($banner->image_attachment_id, DB::table('banners')->where('id', $banner->id)->value('image_attachment_id'));
+        $this->assertDatabaseCount('attachments', 2);
+    }
+
+    public function test_user_avatar_upload_is_shown_on_the_profile_and_reports_image_validation_errors(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->post(route('profile.avatar.update'), ['avatar' => UploadedFile::fake()->image('avatar.png')])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('profile.edit'));
+
+        $attachmentId = $user->fresh()->avatar_attachment_id;
+        $this->assertNotNull($attachmentId);
+        $this->assertDatabaseHas('attachments', ['id' => $attachmentId, 'purpose' => 'avatar']);
+        $this->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee(route('images.show', [$attachmentId, 'thumbnail']), false)
+            ->assertSee('file:bg-zinc-800', false)
+            ->assertSee('rounded bg-red-700 px-3 py-2 text-white', false)
+            ->assertSee('アバターを更新しました。');
+
+        $this->from(route('profile.edit'))
+            ->post(route('profile.avatar.update'), ['avatar' => UploadedFile::fake()->image('too-large.png')->size(1100)])
+            ->assertSessionHasErrors('avatar')
+            ->assertSessionHas('avatar_error')
+            ->assertRedirect(route('profile.edit'));
+        $this->get(route('profile.edit'))->assertSee('JPEG・PNG・WebP画像を指定し、サイズ・寸法上限を確認してください。');
     }
 
     private function diary(User $user): Diary

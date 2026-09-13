@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Diary;
+use App\Services\ContentMedia;
+use App\Services\ImageUpload;
 use App\Support\ContentAccess;
 use App\Support\ContentSanitizer;
 use App\Support\SiteSettings;
+use App\Support\UpdateTimestamp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +30,7 @@ class DiaryController extends Controller
 
     public function mine(Request $request): View
     {
-        return view('diaries.index', ['diaries' => Diary::query()->with('character')->whereBelongsTo($request->user())->latest('updated_at')->paginate(20), 'mine' => true]);
+        return view('diaries.mine', ['diaries' => Diary::query()->with('character')->whereBelongsTo($request->user())->latest('updated_at')->paginate(20), 'mine' => true]);
     }
 
     public function create(Request $request): View
@@ -35,12 +38,14 @@ class DiaryController extends Controller
         return view('diaries.form', ['diary' => null, ...$this->formData($request)]);
     }
 
-    public function store(Request $request, ContentSanitizer $sanitizer): RedirectResponse
+    public function store(Request $request, ContentSanitizer $sanitizer, ContentMedia $media, ImageUpload $upload): RedirectResponse
     {
         $data = $this->validated($request, $sanitizer);
-        $diary = DB::transaction(function () use ($request, $data): Diary {
+        $mediaData = $media->validatePending($request);
+        $diary = DB::transaction(function () use ($request, $data, $mediaData, $media, $upload): Diary {
             $diary = Diary::create(['user_id' => $request->user()->id, ...$this->diaryValues($data)]);
             $this->syncTaxonomy($diary, $data);
+            $media->attachPending($mediaData, $request->user(), 'diary', $diary->id, $diary->visibility, $upload);
 
             return $diary;
         });
@@ -67,13 +72,15 @@ class DiaryController extends Controller
         return view('diaries.form', ['diary' => $diary, ...$this->formData($request), 'selectedCategories' => DB::table('diary_category')->where('diary_id', $diary->id)->pluck('diary_category_id')->all(), 'tagText' => DB::table('tags')->join('diary_tag', 'tags.id', '=', 'diary_tag.tag_id')->where('diary_tag.diary_id', $diary->id)->orderBy('tags.name')->pluck('tags.name')->implode(', ')]);
     }
 
-    public function update(Request $request, Diary $diary, ContentSanitizer $sanitizer): RedirectResponse
+    public function update(Request $request, Diary $diary, ContentSanitizer $sanitizer, ContentMedia $media, ImageUpload $upload, UpdateTimestamp $timestamp): RedirectResponse
     {
         Gate::authorize('update', $diary);
         $data = $this->validated($request, $sanitizer);
-        DB::transaction(function () use ($diary, $data): void {
-            $diary->update($this->diaryValues($data));
+        $mediaData = $media->validatePending($request);
+        DB::transaction(function () use ($request, $diary, $data, $mediaData, $media, $upload, $timestamp): void {
+            $timestamp->update($request, $diary, $this->diaryValues($data));
             $this->syncTaxonomy($diary, $data);
+            $media->attachPending($mediaData, $request->user(), 'diary', $diary->id, $diary->visibility, $upload);
         });
 
         return redirect()->route('diaries.show', $diary)->with('status', '日記を更新しました。');

@@ -86,6 +86,9 @@ new #[Title('Profile settings')] class extends Component {
     <flux:heading level="2" class="sr-only">{{ __('Profile settings') }}</flux:heading>
 
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
+        @if(session('status'))<div class="mb-4 rounded bg-green-50 p-3 text-green-900">{{ session('status') }}</div>@endif
+        @php($avatarError = session('avatar_error'))
+        <div class="mb-6 flex flex-wrap items-center gap-4"><img class="h-20 w-20 rounded object-cover" src="{{ app(\App\Support\AvatarUrl::class)->user(auth()->user()) }}" alt=""><form class="space-y-2" method="POST" enctype="multipart/form-data" action="{{ route('profile.avatar.update') }}">@csrf<input class="block w-full cursor-pointer rounded border bg-white text-sm file:mr-4 file:cursor-pointer file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-white hover:file:bg-zinc-700" type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required><button type="submit" class="rounded border px-3 py-2">画像を設定</button><p class="text-xs text-zinc-500">JPEG・PNG・WebP、上限 {{ number_format(min(app(\App\Support\SiteSettings::class)->get('upload.image_max_bytes',1048576),config('content.image_hard_max_bytes'))/1024) }} KiB</p>@if($avatarError)<p class="text-sm text-red-700">{{ $avatarError }}</p>@endif</form>@if(auth()->user()->avatar_attachment_id)<form method="POST" action="{{ route('profile.avatar.destroy') }}">@csrf @method('DELETE')<button class="rounded bg-red-700 px-3 py-2 text-white hover:bg-red-600">画像を削除</button></form>@endif</div>
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="display_name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 

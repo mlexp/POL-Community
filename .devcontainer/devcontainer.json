@@ -11,6 +11,9 @@
   "mounts": [
     "source=${localEnv:HOME}/.codex,target=/home/dev/.codex,type=bind"
   ],
+  // コンテナ作成時に .bashrc の末尾へ読み込み設定を追記
+  "postCreateCommand": "\necho 'source ${containerWorkspaceFolder}/.devcontainer/.bashrc-extended' >> ~/.bashrc",
+  // 拡張機能を追加
   "customizations": {
     "vscode": {
       "extensions": [

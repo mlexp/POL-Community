@@ -16,6 +16,8 @@ RUN apt-get update \
       libjpeg62-turbo-dev \
       libwebp-dev \
       openssh-client \
+      gnupg \
+      rsync \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install pdo_mysql mysqli gd \
     && rm -rf /var/lib/apt/lists/*
@@ -33,6 +35,9 @@ RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini" \
     && useradd --uid 1000 --gid dev --create-home --shell /bin/bash dev
 
 COPY .devcontainer/php-content.ini /usr/local/etc/php/conf.d/content.ini
+
+# docker CLI is needed for docker-in-docker scenarios, e.g. when using the Docker extension in VS Code
+COPY --from=docker:cli /usr/local/bin/docker /usr/local/bin/docker
 
 # Grant passwordless sudo to dev user
 RUN echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev && \

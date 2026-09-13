@@ -56,12 +56,27 @@ class LegacyMigrator
             DB::transaction(function () use ($rows, $table): void {
                 foreach ($rows as $row) {
                     $sid = trim((string) $row->sid);
-                    if ($sid === '' || $this->mapped($table, $sid, 'user')) {
+                    $login = trim((string) $row->uid);
+                    if ($sid === '') {
                         $this->bump('users_skipped');
 
                         continue;
                     }
-                    $login = trim((string) $row->uid);
+                    if ($this->mapped($table, $sid, 'user')) {
+                        $character = $this->target($sid, $table, 'character');
+                        if ($character !== null) {
+                            $user = $this->target($sid, $table, 'user');
+                            $avatar = $this->target(hash('sha256', ltrim((string) ($row->image ?? ''), '/')), 'legacy_asset', 'attachment');
+                            DB::table('characters')->where('id', $character)->update(['name' => mb_substr($login, 0, 100), 'short_message' => mb_substr(trim((string) ($row->comment ?? '')), 0, 280) ?: null, 'avatar_attachment_id' => $avatar, 'updated_at' => $this->date($row->update_time ?? null)]);
+                            if ($user !== null) {
+                                DB::table('users')->where('id', $user)->update(['short_message' => null, 'avatar_attachment_id' => null]);
+                            }
+                            $this->profile($row, $character, $table, $sid, $this->date($row->update_time ?? null), true);
+                        }
+                        $this->bump('users_skipped');
+
+                        continue;
+                    }
                     $email = $this->email($row->mail_address ?? null);
                     if ($login === '' || DB::table('users')->whereRaw('LOWER(login_id) = ?', [mb_strtolower($login)])->exists()) {
                         $this->issue($table, $sid, 'error', 'login_id_conflict', 'ログインIDが空または大文字小文字を無視して重複しています。');
@@ -75,16 +90,16 @@ class LegacyMigrator
                     }
                     $id = (string) Str::ulid();
                     $at = $this->date($row->update_time ?? null);
-                    DB::table('users')->insert(['id' => $id, 'login_id' => mb_substr($login, 0, 64), 'email' => $email, 'display_name' => mb_substr(trim((string) ($row->name ?? '')) ?: $login, 0, 100), 'bio' => $this->text($row->comment_detail ?? null), 'short_message' => mb_substr(trim((string) ($row->comment ?? '')), 0, 280) ?: null, 'website_url' => $this->httpsOrNull($row->url ?? null), 'password' => null, 'password_reset_required' => true, 'role' => ((int) ($row->user_role ?? 0)) >= 2 ? 'admin' : 'member', 'status' => 'active', 'created_at' => $at, 'updated_at' => $at]);
+                    DB::table('users')->insert(['id' => $id, 'login_id' => mb_substr($login, 0, 64), 'email' => $email, 'display_name' => mb_substr(trim((string) ($row->name ?? '')) ?: $login, 0, 100), 'bio' => $this->text($row->comment_detail ?? null), 'short_message' => null, 'website_url' => $this->httpsOrNull($row->url ?? null), 'password' => null, 'password_reset_required' => true, 'role' => ((int) ($row->user_role ?? 0)) >= 2 ? 'admin' : 'member', 'status' => 'active', 'created_at' => $at, 'updated_at' => $at]);
                     $this->map($table, $sid, 'user', $id, $row);
                     $avatar = $this->importLegacyImage((string) ($row->image ?? ''), $id, $this->visibility($row->open_role ?? 0, $table, $sid), $table, $sid);
                     if ($avatar !== null) {
-                        DB::table('users')->where('id', $id)->update(['avatar_attachment_id' => $avatar]);
+                        // The legacy image represents the migrated primary character.
                     }
                     $character = (string) Str::ulid();
                     $game = DB::table('games')->where('code', 'ffxi')->value('id');
                     if ($game !== null) {
-                        DB::table('characters')->insert(['id' => $character, 'user_id' => $id, 'game_id' => $game, 'name' => mb_substr(trim((string) ($row->name ?? '')) ?: $login, 0, 100), 'is_primary' => true, 'profile_text' => $this->text($row->comment_detail ?? null), 'visibility' => $this->visibility($row->open_role ?? 0, $table, $sid), 'created_at' => $at, 'updated_at' => $at]);
+                        DB::table('characters')->insert(['id' => $character, 'user_id' => $id, 'game_id' => $game, 'name' => mb_substr($login, 0, 100), 'is_primary' => true, 'profile_text' => $this->text($row->comment_detail ?? null), 'short_message' => mb_substr(trim((string) ($row->comment ?? '')), 0, 280) ?: null, 'avatar_attachment_id' => $avatar, 'visibility' => $this->visibility($row->open_role ?? 0, $table, $sid), 'created_at' => $at, 'updated_at' => $at]);
                         $this->map($table, $sid, 'character', $character, $row);
                         $this->profile($row, $character, $table, $sid, $at);
                     }
@@ -432,16 +447,24 @@ class LegacyMigrator
         }
     }
 
-    private function profile(object $row, string $character, string $table, string $sid, CarbonImmutable $at): void
+    private function profile(object $row, string $character, string $table, string $sid, CarbonImmutable $at, bool $update = false): void
     {
         $nationCodes = [1 => 'sandoria', 2 => 'bastok', 3 => 'windurst'];
-        $raceCodes = [1 => 'hume', 2 => 'elvaan', 3 => 'tarutaru', 4 => 'mithra', 5 => 'galka'];
+        $raceProfiles = [0 => ['hume', 'male'], 1 => ['hume', 'female'], 2 => ['elvaan', 'male'], 3 => ['elvaan', 'female'], 4 => ['tarutaru', 'male'], 5 => ['tarutaru', 'female'], 6 => ['mithra', 'female'], 7 => ['galka', 'male']];
         $nation = DB::table('ffxi_nations')->where('code', $nationCodes[(int) ($row->ffxi_realm ?? 0)] ?? '')->value('id');
-        $race = DB::table('ffxi_races')->where('code', $raceCodes[(int) ($row->ffxi_race ?? 0)] ?? '')->value('id');
+        [$raceCode, $gender] = $raceProfiles[(int) ($row->ffxi_race ?? 0)] ?? [null, null];
+        $race = DB::table('ffxi_races')->where('code', $raceCode)->value('id');
+        $faceNumber = intdiv(max(0, (int) ($row->ffxi_face ?? 0)), 2) + 1;
+        $faceCode = $faceNumber.(((int) ($row->ffxi_face ?? 0)) % 2 === 0 ? 'a' : 'b');
+        $face = DB::table('ffxi_face_types')->where(['race_id' => $race, 'gender' => $gender, 'face_code' => $faceCode])->value('id');
         $jobs = DB::table('ffxi_jobs')->orderBy('sort_order')->pluck('id')->all();
         $main = $jobs[max(0, (int) ($row->ffxi_main_job ?? 0) - 1)] ?? null;
         $support = $jobs[max(0, (int) ($row->ffxi_sub_job ?? 0) - 1)] ?? null;
-        DB::table('ffxi_profiles')->insert(['character_id' => $character, 'nation_id' => $nation, 'rank' => min(10, max(1, (int) ($row->ffxi_rank ?? 1))), 'race_id' => $race, 'main_job_id' => $main, 'support_job_id' => $support, 'pol_handle' => mb_substr(trim((string) ($row->ffxi_pol_handle ?? '')), 0, 64) ?: null, 'created_at' => $at, 'updated_at' => $at]);
+        DB::table('ffxi_profiles')->updateOrInsert(['character_id' => $character], ['nation_id' => $nation, 'rank' => min(10, max(1, (int) ($row->ffxi_rank ?? 1))), 'race_id' => $race, 'gender' => $gender, 'face_type_id' => $face, 'main_job_id' => $main, 'support_job_id' => $support, 'pol_handle' => mb_substr(trim((string) ($row->ffxi_pol_handle ?? '')), 0, 64) ?: null, 'created_at' => $at, 'updated_at' => $at]);
+        if ($update) {
+            DB::table('ffxi_character_job_levels')->where('character_id', $character)->delete();
+            DB::table('ffxi_character_craft_levels')->where('character_id', $character)->delete();
+        }
         $this->levels((string) ($row->ffxi_jobs_level ?? ''), $jobs, 'ffxi_character_job_levels', 'job_id', 99, $character, $table, $sid, $at);
         $crafts = DB::table('ffxi_crafts')->orderBy('sort_order')->pluck('id')->all();
         $this->levels((string) ($row->ffxi_ics_level ?? ''), $crafts, 'ffxi_character_craft_levels', 'craft_id', 255, $character, $table, $sid, $at);

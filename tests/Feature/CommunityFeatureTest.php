@@ -23,7 +23,10 @@ class CommunityFeatureTest extends TestCase
     public function test_member_can_create_reply_edit_and_delete_with_float_and_counts(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user)->get(route('community.create'))->assertOk();
+        $this->actingAs($user)->get(route('community.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['見出し', '右寄せ', '中央寄せ', '左寄せ', '文字を大きく', '文字を小さく', '太字', '斜体', 'アンダーライン', '取り消し線', '上付き', '下付き', '文字色', '背景色', '箇条書き', '番号', '書式解除', 'リンク', 'リンク解除'])
+            ->assertSee('role="separator" aria-orientation="vertical"', false);
         $this->post(route('community.store'), $this->data())->assertSessionHasNoErrors()->assertRedirect();
         $thread = CommunityThread::sole();
         $post = CommunityPost::sole();
@@ -95,9 +98,18 @@ class CommunityFeatureTest extends TestCase
         $this->get(route('community.index'))->assertDontSee('冒険の相談');
     }
 
+    public function test_listing_expands_the_first_post_body_and_creation_form_has_media_fields(): void
+    {
+        $author = User::factory()->create(['display_name' => 'スレッド投稿者']);
+        $this->actingAs($author)->post(route('community.store'), $this->data());
+
+        $this->get(route('community.index'))->assertOk()->assertSee('冒険の相談 [未分類] - スレッド投稿者')->assertSee('本文')->assertSee('スレッドを開く');
+        $this->get(route('community.create'))->assertOk()->assertSee('media_image', false)->assertSee('media_video_url', false);
+    }
+
     /** @return array<string,mixed> */
     private function data(): array
     {
-        return ['title' => '冒険の相談', 'category_id' => DB::table('community_categories')->value('id'), 'visibility' => 'public', 'body_html' => '<p>本文</p><script>alert(1)</script>'];
+        return ['title' => '冒険の相談', 'category_id' => DB::table('community_categories')->where('slug', 'uncategorized')->value('id'), 'visibility' => 'public', 'body_html' => '<p>本文</p><script>alert(1)</script>'];
     }
 }

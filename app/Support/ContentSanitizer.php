@@ -12,7 +12,11 @@ class ContentSanitizer
     public function __construct()
     {
         $config = (new HtmlSanitizerConfig)
+            // The editor limit is character based, while Symfony's default is
+            // 20,000 bytes and can cut multibyte text in the middle.
+            ->withMaxInputLength(1_000_000)
             ->allowSafeElements()
+            ->allowElement('span', ['data-text-color', 'data-background-color'])
             ->blockElement('img')
             ->dropElement('iframe')
             ->dropElement('object')

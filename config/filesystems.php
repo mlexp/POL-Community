@@ -33,6 +33,12 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
+            // CLI imports and PHP-FPM share access through the storage group.
+            // Files remain outside the public directory and use route authorization.
+            'permissions' => [
+                'file' => ['public' => 0660, 'private' => 0660],
+                'dir' => ['public' => 02770, 'private' => 02770],
+            ],
             'serve' => true,
             'throw' => false,
             'report' => false,

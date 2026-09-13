@@ -20,9 +20,9 @@ class DatabaseSeederTest extends TestCase
         $this->assertDatabaseCount('ffxi_races', 5);
         $this->assertDatabaseCount('ffxi_jobs', 22);
         $this->assertDatabaseCount('ffxi_crafts', 10);
-        $this->assertDatabaseCount('ffxi_face_types', 80);
+        $this->assertDatabaseCount('ffxi_face_types', 128);
         $this->assertDatabaseCount('community_categories', 5);
-        $this->assertDatabaseCount('site_settings', 12);
+        $this->assertDatabaseCount('site_settings', 20);
         $this->assertDatabaseHas('ffxi_jobs', ['code' => 'sch', 'name_ja' => '学者']);
         $this->assertDatabaseHas('site_settings', ['key' => 'registration.require_admin_approval']);
     }

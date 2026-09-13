@@ -24,3 +24,5 @@ yarn-error.log
 /.zed
 /old_project
 /docs
+/.devcontainer/.bashrc-extended
+/mlexp_app_wk

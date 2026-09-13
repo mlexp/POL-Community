@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Character;
 use App\Models\User;
+use App\Support\AvatarUrl;
 use Database\Seeders\FfxiMasterSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CharacterProfileTest extends TestCase
@@ -73,5 +75,60 @@ class CharacterProfileTest extends TestCase
         $character = Character::create(['user_id' => $owner->id, 'game_id' => $gameId, 'name' => 'Owned', 'is_primary' => true, 'visibility' => 'public']);
 
         $this->actingAs($other)->get(route('characters.edit', $character))->assertForbidden();
+    }
+
+    public function test_character_search_returns_one_row_per_visible_character(): void
+    {
+        $owner = User::factory()->create();
+        $gameId = DB::table('games')->where('code', 'ffxi')->value('id');
+        Character::create(['user_id' => $owner->id, 'game_id' => $gameId, 'name' => 'Visible Hero', 'short_message' => '冒険中', 'visibility' => 'public']);
+        Character::create(['user_id' => $owner->id, 'game_id' => $gameId, 'name' => 'Hidden Hero', 'visibility' => 'private']);
+
+        $this->get(route('characters.index', ['short_message' => '冒険']))
+            ->assertOk()
+            ->assertSee('Visible Hero')
+            ->assertDontSee('Hidden Hero');
+    }
+
+    public function test_admin_can_bulk_update_selected_characters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $owner = User::factory()->create();
+        $gameId = DB::table('games')->where('code', 'ffxi')->value('id');
+        $characters = collect(['First', 'Second'])->map(fn (string $name) => Character::create(['user_id' => $owner->id, 'game_id' => $gameId, 'name' => $name, 'visibility' => 'public']));
+
+        $this->actingAs($admin)->patch(route('admin.characters.bulk'), [
+            'character_ids' => $characters->pluck('id')->all(),
+            'field' => 'short_message',
+            'value' => '一括更新',
+        ])->assertSessionHasNoErrors();
+
+        foreach ($characters as $character) {
+            $this->assertDatabaseHas('characters', ['id' => $character->id, 'short_message' => '一括更新']);
+        }
+    }
+
+    public function test_character_avatar_url_reads_attachment_from_eloquent_model(): void
+    {
+        $attachmentId = (string) Str::ulid();
+        $character = new Character(['avatar_attachment_id' => $attachmentId]);
+
+        $this->assertSame(route('images.show', [$attachmentId, 'thumbnail']), app(AvatarUrl::class)->character($character));
+    }
+
+    public function test_admin_can_update_character_without_changing_updated_at(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $owner = User::factory()->create();
+        $character = Character::create(['user_id' => $owner->id, 'game_id' => DB::table('games')->where('code', 'ffxi')->value('id'), 'name' => 'Before', 'visibility' => 'public']);
+        $original = $character->updated_at;
+        $this->travel(1)->day();
+
+        $this->actingAs($admin)->put(route('characters.update', $character), [
+            'name' => 'After', 'visibility' => 'public', 'preserve_updated_at' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('After', $character->fresh()->name);
+        $this->assertTrue($original->equalTo($character->fresh()->updated_at));
     }
 }
