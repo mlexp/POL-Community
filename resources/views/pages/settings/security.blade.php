@@ -351,7 +351,8 @@ new #[Title('Security settings')] class extends Component {
                     {{ __('Cancel') }}
                 </flux:button>
                 <flux:button
-                    variant="danger"
+                    variant="outline"
+                    class="border-red-700! text-red-700!"
                     wire:click="deletePasskey"
                 >
                     {{ __('Remove passkey') }}

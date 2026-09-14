@@ -44,7 +44,7 @@
                 @foreach($group as $item)
                     @if(isset($item['colors']))
                         <details data-rich-text-palette class="relative">
-                            <summary class="cursor-pointer list-none rounded border bg-white p-1 dark:bg-zinc-800" title="{{ $item['label'] }}">
+                            <summary class="cursor-pointer list-none rounded border bg-white p-1 opacity-60 transition-opacity hover:opacity-100 dark:bg-zinc-800" title="{{ $item['label'] }}">
                                 <img class="h-6 w-6 dark:invert" src="{{ asset('assets/editor/'.$item['icon']) }}" alt="{{ $item['label'] }}">
                             </summary>
                             <div class="absolute z-10 mt-1 grid w-36 grid-cols-4 gap-1 rounded border bg-white p-2 shadow dark:bg-zinc-900">
@@ -54,7 +54,7 @@
                             </div>
                         </details>
                     @else
-                        <button type="button" data-rich-text-control data-command="{{ $item['command'] }}" @isset($item['value']) data-value="{{ $item['value'] }}" @endisset class="rounded border bg-white p-1 dark:bg-zinc-800" title="{{ $item['label'] }}">
+                        <button type="button" data-rich-text-control data-command="{{ $item['command'] }}" @isset($item['value']) data-value="{{ $item['value'] }}" @endisset class="cursor-pointer rounded border bg-white p-1 opacity-60 transition-opacity hover:opacity-100 dark:bg-zinc-800" title="{{ $item['label'] }}">
                             <img class="h-6 w-6 dark:invert" src="{{ asset('assets/editor/'.$item['icon']) }}" alt="{{ $item['label'] }}">
                         </button>
                     @endif

@@ -29,6 +29,7 @@ class DiaryFeatureTest extends TestCase
             ->assertSeeInOrder(['見出し', '右寄せ', '中央寄せ', '左寄せ', '文字を大きく', '文字を小さく', '太字', '斜体', 'アンダーライン', '取り消し線', '上付き', '下付き', '文字色', '背景色', '箇条書き', '番号', '書式解除', 'リンク', 'リンク解除'])
             ->assertSee('role="separator" aria-orientation="vertical"', false)
             ->assertSee('data-rich-text-control data-command="formatBlock"', false)
+            ->assertSee('class="cursor-pointer rounded border bg-white p-1 opacity-60 transition-opacity hover:opacity-100', false)
             ->assertSee('src="'.asset('assets/editor/title_24dp_1F1F1F.svg').'" alt="見出し"', false)
             ->assertSee('src="'.asset('assets/editor/format_color_text_24dp_1F1F1F.svg').'" alt="文字色"', false)
             ->assertSee('src="'.asset('assets/editor/link_off_24dp_1F1F1F.svg').'" alt="リンク解除"', false)
@@ -110,6 +111,11 @@ class DiaryFeatureTest extends TestCase
         $author = User::factory()->create();
         $commenter = User::factory()->create();
         $diary = $this->diary($author);
+
+        $this->actingAs($commenter)->get(route('diaries.show', $diary))
+            ->assertOk()
+            ->assertSee('コメントを投稿')
+            ->assertDontSee('>投稿</button>', false);
 
         $this->actingAs($commenter)->post(route('diary-comments.store', $diary), [
             'body_html' => '<p>Nice!</p><img src=x onerror=alert(1)>',

@@ -18,6 +18,24 @@ class ProfileUpdateTest extends TestCase
         $this->get(route('profile.edit'))->assertOk();
     }
 
+    public function test_profile_page_and_update_support_a_migrated_user_without_email(): void
+    {
+        $user = User::factory()->create(['email' => null]);
+        $this->actingAs($user);
+
+        $this->get(route('profile.edit'))->assertOk();
+
+        Livewire::test('pages::settings.profile')
+            ->assertSet('email', '')
+            ->set('display_name', 'メール未設定ユーザー')
+            ->set('email', '')
+            ->call('updateProfileInformation')
+            ->assertHasNoErrors();
+
+        $this->assertSame('メール未設定ユーザー', $user->refresh()->display_name);
+        $this->assertNull($user->email);
+    }
+
     public function test_profile_information_can_be_updated(): void
     {
         $user = User::factory()->create();

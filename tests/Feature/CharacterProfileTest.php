@@ -64,7 +64,10 @@ class CharacterProfileTest extends TestCase
 
         $this->get(route('characters.show', $character))->assertForbidden();
         $this->actingAs($other)->get(route('characters.show', $character))->assertForbidden();
-        $this->actingAs($owner)->get(route('characters.show', $character))->assertOk();
+        $this->actingAs($owner)->get(route('characters.show', $character))
+            ->assertOk()
+            ->assertSee('class="self-start rounded bg-zinc-900 px-5 py-2 text-white"', false)
+            ->assertSee('href="'.route('characters.edit', $character).'">編集</a>', false);
     }
 
     public function test_member_cannot_edit_another_members_character(): void

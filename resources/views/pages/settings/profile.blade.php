@@ -23,7 +23,7 @@ new #[Title('Profile settings')] class extends Component {
     public function mount(): void
     {
         $this->display_name = Auth::user()->display_name;
-        $this->email = Auth::user()->email;
+        $this->email = Auth::user()->email ?? '';
     }
 
     /**
@@ -34,6 +34,7 @@ new #[Title('Profile settings')] class extends Component {
         $user = Auth::user();
 
         $validated = $this->validate($this->profileRules($user->id));
+        $validated['email'] = filled($validated['email']) ? $validated['email'] : null;
 
         $user->fill($validated);
 
@@ -93,7 +94,7 @@ new #[Title('Profile settings')] class extends Component {
             <flux:input wire:model="display_name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
             <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+                <flux:input wire:model="email" :label="__('Email')" type="email" autocomplete="email" />
 
                 {{-- @chisel-email-verification --}}
                 @if ($this->hasUnverifiedEmail)

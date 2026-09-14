@@ -85,6 +85,7 @@ Route::middleware(['auth', 'verified', 'password.changed', 'active.member'])->gr
         Route::put('settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         Route::get('users', [AdminController::class, 'users'])->name('users');
         Route::patch('users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+        Route::post('users/{user}/reset-password', [AdminController::class, 'resetUserPassword'])->middleware('throttle:10,1')->name('users.reset-password');
         Route::delete('users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
         Route::get('diary-categories', [AdminController::class, 'diaryCategories'])->name('diary-categories');
         Route::post('diary-categories', [AdminController::class, 'storeDiaryCategory'])->name('diary-categories.store');

@@ -10,6 +10,7 @@ use Database\Seeders\SiteDefaultsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdministrationTest extends TestCase
@@ -104,6 +105,66 @@ class AdministrationTest extends TestCase
         $this->assertSoftDeleted($diary);
         $this->get(route('characters.index'))->assertDontSee('Deleted Hero');
         $this->get(route('diaries.index'))->assertDontSee('Deleted Diary');
+    }
+
+    public function test_admin_can_issue_a_one_time_visible_temporary_password_for_a_user_without_email(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $member = User::factory()->create(['email' => null]);
+        $oldPasswordHash = $member->password;
+
+        $response = $this->actingAs($admin)->post(route('admin.users.reset-password', $member));
+
+        $response->assertRedirect()->assertSessionHas('temporary_password');
+        $temporaryPassword = session('temporary_password');
+        $this->assertIsString($temporaryPassword);
+        $this->assertNotSame('', $temporaryPassword);
+        $this->assertNotSame($oldPasswordHash, $member->refresh()->password);
+        $this->assertTrue(Hash::check($temporaryPassword, (string) $member->password));
+        $this->assertTrue($member->password_reset_required);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'user.password_temporarily_reset',
+            'subject_id' => $member->id,
+        ]);
+        $this->assertDatabaseMissing('audit_logs', ['after_json' => $temporaryPassword]);
+
+        $this->get(route('admin.users'))
+            ->assertOk()
+            ->assertSee($temporaryPassword)
+            ->assertSeeInOrder(['リセット', '削除']);
+
+        auth()->logout();
+        $this->post(route('login.store'), [
+            'login' => $member->login_id,
+            'password' => $temporaryPassword,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('dashboard', absolute: false));
+        $this->get(route('dashboard'))->assertRedirect(route('password.change-required.edit'));
+    }
+
+    public function test_temporary_password_can_be_issued_for_a_member_with_email(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $member = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.reset-password', $member))
+            ->assertRedirect()
+            ->assertSessionHas('temporary_password');
+        $this->assertTrue($member->refresh()->password_reset_required);
+    }
+
+    public function test_temporary_password_cannot_be_issued_for_an_admin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $otherAdmin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.reset-password', $otherAdmin))
+            ->assertStatus(422);
+        $this->assertFalse($otherAdmin->refresh()->password_reset_required);
+        $this->get(route('admin.users'))
+            ->assertOk()
+            ->assertDontSee(route('admin.users.reset-password', $otherAdmin), false);
     }
 
     public function test_admin_can_render_site_settings_with_configurable_home_sections(): void

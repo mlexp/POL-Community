@@ -2,7 +2,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <title>
-    {{ filled($title ?? null) ? $title.' - '.config('app.name', 'Laravel') : config('app.name', 'Laravel') }}
+    @php($siteTitle = app(\App\Support\SiteSettings::class)->get('site.title', config('app.name', 'POL Community')))
+    {{ filled($title ?? null) ? $title.' - '.$siteTitle : $siteTitle }}
 </title>
 
 <link rel="icon" href="/favicon.ico" sizes="any">

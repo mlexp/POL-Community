@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -178,6 +179,25 @@ class AdminController extends Controller
         $audit->log($request, 'user.moderated', $user, $before, $data);
 
         return back()->with('status', 'ユーザーを更新しました。');
+    }
+
+    public function resetUserPassword(Request $request, User $user, AuditLogger $audit): RedirectResponse
+    {
+        Gate::authorize('update', $user);
+        abort_if($user->role === 'admin', 422, '管理者には一時パスワードを発行できません。');
+
+        $temporaryPassword = Str::password(20);
+        $user->forceFill([
+            'password' => Hash::make($temporaryPassword),
+            'password_reset_required' => true,
+        ])->save();
+        $audit->log($request, 'user.password_temporarily_reset', $user);
+
+        return back()->with([
+            'status' => '一時パスワードを発行しました。',
+            'temporary_password' => $temporaryPassword,
+            'temporary_password_user' => $user->display_name,
+        ]);
     }
 
     public function deleteUser(Request $request, User $user, AuditLogger $audit): RedirectResponse

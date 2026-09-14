@@ -18,6 +18,38 @@ function initializeRichTextEditors() {
             selection.removeAllRanges();
             selection.addRange(savedRange);
         };
+        const createSelectionBookmark = () => {
+            const selection = window.getSelection();
+            if (!selection?.rangeCount || selection.isCollapsed) return null;
+            const range = selection.getRangeAt(0);
+            if (!editor.contains(range.commonAncestorContainer)) return null;
+            const start = document.createElement('span');
+            const end = document.createElement('span');
+            start.dataset.selectionMarker = 'start';
+            end.dataset.selectionMarker = 'end';
+            const endRange = range.cloneRange();
+            endRange.collapse(false);
+            endRange.insertNode(end);
+            const startRange = range.cloneRange();
+            startRange.collapse(true);
+            startRange.insertNode(start);
+
+            return { start, end };
+        };
+        const restoreSelectionBookmark = (bookmark) => {
+            if (!bookmark?.start.isConnected || !bookmark.end.isConnected) return false;
+            const range = document.createRange();
+            range.setStartAfter(bookmark.start);
+            range.setEndBefore(bookmark.end);
+            bookmark.start.remove();
+            bookmark.end.remove();
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            savedRange = range.cloneRange();
+
+            return true;
+        };
         const sync = () => { input.value = editor.innerHTML; };
         editor.addEventListener('input', () => { sync(); rememberSelection(); });
         editor.addEventListener('keyup', rememberSelection);
@@ -53,16 +85,43 @@ function initializeRichTextEditors() {
                 editor.focus({ preventScroll: true });
                 restoreSelection();
                 const command = button.dataset.command;
-                const value = command === 'createLink' ? window.prompt('リンク先（https://）') : (command === 'formatBlock' ? 'H2' : (button.dataset.value || null));
-                if (command === 'createLink' && (!value || !value.startsWith('https://'))) return;
+                let linkBookmark = null;
+                let value = command === 'formatBlock' ? 'H2' : (button.dataset.value || null);
+                if (command === 'createLink') {
+                    linkBookmark = createSelectionBookmark();
+                    value = window.prompt('リンク先（https://）');
+                    if (!value || !value.startsWith('https://')) {
+                        restoreSelectionBookmark(linkBookmark);
+                        return;
+                    }
+                    editor.focus({ preventScroll: true });
+                    if (!restoreSelectionBookmark(linkBookmark)) restoreSelection();
+                }
                 document.execCommand(command, false, value);
+                if (command === 'removeFormat') {
+                    const selection = window.getSelection();
+                    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+                    if (range) {
+                        editor.querySelectorAll('[data-text-color], [data-background-color]').forEach((element) => {
+                            if (!range.intersectsNode(element)) return;
+                            element.removeAttribute('data-text-color');
+                            element.removeAttribute('data-background-color');
+                            if (!element.attributes.length) element.replaceWith(...element.childNodes);
+                        });
+                    }
+                }
                 if (command === 'fontSize') {
+                    const sizeBookmark = createSelectionBookmark();
                     const semanticTag = value === '5' ? 'big' : 'small';
                     editor.querySelectorAll(`font[size="${value}"]`).forEach((font) => {
                         const replacement = document.createElement(semanticTag);
                         replacement.replaceChildren(...font.childNodes);
                         font.replaceWith(replacement);
                     });
+                    if (!restoreSelectionBookmark(sizeBookmark)) {
+                        restoreSelection();
+                        rememberSelection();
+                    }
                 }
                 if (command === 'foreColor') {
                     const color = value.slice(1).toUpperCase();

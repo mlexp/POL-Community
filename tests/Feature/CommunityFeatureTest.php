@@ -25,6 +25,7 @@ class CommunityFeatureTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user)->get(route('community.create'))
             ->assertOk()
+            ->assertSee('class="rounded bg-zinc-800 px-5 py-2 text-white">保存</button>', false)
             ->assertSeeInOrder(['見出し', '右寄せ', '中央寄せ', '左寄せ', '文字を大きく', '文字を小さく', '太字', '斜体', 'アンダーライン', '取り消し線', '上付き', '下付き', '文字色', '背景色', '箇条書き', '番号', '書式解除', 'リンク', 'リンク解除'])
             ->assertSee('role="separator" aria-orientation="vertical"', false);
         $this->post(route('community.store'), $this->data())->assertSessionHasNoErrors()->assertRedirect();
@@ -32,7 +33,14 @@ class CommunityFeatureTest extends TestCase
         $post = CommunityPost::sole();
         $this->assertSame(1, $thread->post_count);
         $this->assertStringNotContainsString('<script', $post->body_html);
-        $this->get(route('community.show', $thread))->assertOk()->assertSee('冒険の相談');
+        $this->get(route('community.show', $thread))
+            ->assertOk()
+            ->assertSee('冒険の相談')
+            ->assertSee('href="#comment-form"', false)
+            ->assertSee('<h2 class="text-xl font-bold">コメント</h2>', false)
+            ->assertSee('コメントを投稿')
+            ->assertDontSee('返信受付中')
+            ->assertDontSee('返信する');
         $this->travel(1)->minutes();
         $this->post(route('community.reply', $thread), ['body_html' => '<p>返信</p>'])->assertRedirect();
         $this->assertSame(2, $thread->fresh()->post_count);
@@ -103,8 +111,20 @@ class CommunityFeatureTest extends TestCase
         $author = User::factory()->create(['display_name' => 'スレッド投稿者']);
         $this->actingAs($author)->post(route('community.store'), $this->data());
 
-        $this->get(route('community.index'))->assertOk()->assertSee('冒険の相談 [未分類] - スレッド投稿者')->assertSee('本文')->assertSee('スレッドを開く');
+        $this->get(route('community.index'))
+            ->assertOk()
+            ->assertSee('class="rounded bg-zinc-800 px-5 py-2 text-white" href="'.route('community.create').'">スレッドを作成</a>', false)
+            ->assertSee('冒険の相談 [未分類] - スレッド投稿者')
+            ->assertSee('本文')
+            ->assertSee('スレッドを開く')
+            ->assertSee(route('community.show', $this->thread()).'#comment-form', false)
+            ->assertSee('コメントする');
         $this->get(route('community.create'))->assertOk()->assertSee('media_image', false)->assertSee('media_video_url', false);
+    }
+
+    private function thread(): CommunityThread
+    {
+        return CommunityThread::sole();
     }
 
     /** @return array<string,mixed> */

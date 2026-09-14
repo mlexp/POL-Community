@@ -66,6 +66,10 @@ select:focus[data-flux-control] {
     a.rounded.border {
         @apply !bg-zinc-900 !text-white hover:!bg-zinc-800;
     }
+
+    form:has(input[name='_method'][value='DELETE']) button {
+        @apply !border !border-red-700 !bg-transparent !text-red-700 hover:!bg-red-50;
+    }
 }
 
 .rich-text-content h2 { @apply my-4 text-2xl font-semibold; }

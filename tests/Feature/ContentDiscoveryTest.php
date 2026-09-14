@@ -58,6 +58,23 @@ class ContentDiscoveryTest extends TestCase
         $this->get('/search?q=%27%20OR%201%3D1')->assertOk()->assertDontSee('相談');
     }
 
+    public function test_home_and_search_hide_community_author_without_a_user_id(): void
+    {
+        $thread = CommunityThread::create(['created_by_user_id' => null, 'category_id' => DB::table('community_categories')->value('id'), 'title' => '匿名の相談', 'status' => 'open', 'visibility' => 'public', 'last_posted_at' => now(), 'post_count' => 1]);
+        CommunityPost::create(['thread_id' => $thread->id, 'user_id' => null, 'author_name_snapshot' => '非ログインユーザー', 'body_html' => '<p>匿名の本文</p>', 'status' => 'visible', 'created_at' => $thread->last_posted_at]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('匿名の相談')
+            ->assertDontSee('非ログインユーザー')
+            ->assertDontSee('削除済みユーザー');
+        $this->get('/search?q=匿名')
+            ->assertOk()
+            ->assertSee('匿名の相談')
+            ->assertDontSee('非ログインユーザー')
+            ->assertDontSee('削除済みユーザー');
+    }
+
     public function test_admin_can_manage_announcements_categories_and_home_limit(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -116,6 +133,14 @@ class ContentDiscoveryTest extends TestCase
             ->assertSee('file:bg-zinc-800', false)
             ->assertSee('class="flex gap-3 md:col-span-5"', false)
             ->assertSeeInOrder(['検索', 'クリア']);
+        CommunityThread::create([
+            'created_by_user_id' => null,
+            'category_id' => DB::table('community_categories')->value('id'),
+            'title' => '旧匿名スレッド',
+            'status' => 'open',
+            'visibility' => 'public',
+            'last_posted_at' => now(),
+        ]);
         $this->get(route('admin.content'))
             ->assertOk()
             ->assertSeeInOrder(['data-search-row="text"', 'data-search-row="created"', 'data-search-row="updated"', 'data-search-row="actions"'], false)
@@ -124,6 +149,7 @@ class ContentDiscoveryTest extends TestCase
             ->assertSee('id="select-all-items"', false)
             ->assertSee('class="content-item-checkbox"', false)
             ->assertSee("querySelectorAll('.content-item-checkbox')", false)
+            ->assertSee('非ログインユーザー')
             ->assertSeeInOrder(['投稿日（開始）', '～', '投稿日（終了）'])
             ->assertSeeInOrder(['更新日（開始）', '～', '更新日（終了）']);
         $this->post(route('admin.diary-categories.store'), ['name' => '攻略', 'slug' => 'strategy', 'description' => '', 'sort_order' => 1])->assertRedirect();
