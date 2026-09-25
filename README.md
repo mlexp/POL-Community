@@ -38,7 +38,7 @@ Laravel 13、Livewire 4、Tailwind CSSで構築されています。
 
 ## 新規配備
 
-以下は、新しい環境へ配備して動作させるための最低限の手順です。実際の本番更新、切り替え、ロールバックについては[本番更新リリース手順](docs/production-release-runbook.md)を参照してください。
+以下は、新しい環境へ配備して動作させるための最低限の手順です。実際の本番更新、切り替え、ロールバックについては[リリースマニュアル](release-manual.md)を参照してください。
 
 ### 1. 配布物を作成する
 
@@ -146,3 +146,7 @@ vendor/bin/phpstan analyse --memory-limit=512M
 composer audit --locked --no-interaction
 npm audit --audit-level=moderate
 ```
+
+## 商標・著作物に関する表示
+
+PlayOnline 及び ファイナルファンタジーXI は、株式会社スクウェア・エニックスの登録商標です。また、アセットに使用されている一部の画像データの著作権は、株式会社スクウェア・エニックスに帰属します。
