@@ -16,6 +16,7 @@ Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
+*.Identifier
 /auth.json
 /.fleet
 /.idea
@@ -26,3 +27,4 @@ yarn-error.log
 /docs
 /.devcontainer/.bashrc-extended
 /mlexp_app_wk
+/app_db

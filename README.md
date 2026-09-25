@@ -4,6 +4,14 @@ POL Communityは、PlayOnlineのメンバー向けコミュニティサイトで
 
 Laravel 13、Livewire 4、Tailwind CSSで構築されています。
 
+## 利用上の注意
+
+`public/assets/ffxi`に含まれる画像は、FINAL FANTASY XIの著作物であり、商用・営利目的では利用できません。そのため、本アプリケーションは基本的に非商用での利用を想定しています。
+
+本アプリケーションを商用・営利目的で利用する場合は、`public/assets/ffxi`内の画像を、商用利用可能な画像へ差し替えてください。詳細は、スクウェア・エニックスの[ファイナルファンタジーXI 著作物利用許諾条件](https://support.jp.square-enix.com/rule.php?id=11&la=0&tag=authc)を確認してください。
+
+また、管理者ページの「サイト管理」→「サイト設定」で設定するフッターには、`(C) SQUARE ENIX`の表記を含めてください。
+
 ## 動作要件
 
 - PHP 8.3
@@ -115,7 +123,21 @@ php artisan schedule:list
 
 `production`、`APP_DEBUG OFF`、正しいURLとMySQLデータベース、全migrationが`Ran`であることを確認します。ブラウザではトップページ、`/login`、静的資産の表示に加え、`.env`、`storage`、`vendor`が外部から取得できないことを確認してください。
 
-## 開発時の品質確認
+## 開発環境
+
+### 開発コンテナのセキュリティ上の注意
+
+`.devcontainer/Dockerfile`、`.devcontainer/devcontainer.json`、`compose.yaml`は、信頼できるソースコードをローカルで開発するための設定です。現在の構成では、開発上の利便性のため次の強い権限やホスト連携を有効にしています。
+
+- ホストのDockerソケットをコンテナへマウント
+- `SYS_ADMIN` capabilityを付与
+- seccompを無効化
+- コンテナ内でパスワードなし`sudo`を許可
+- ホストの`~/.codex`をコンテナへマウント
+
+これらはコンテナからホストやDockerデーモンへ強い操作権限を与えるため、不特定のコードを実行する環境には適しません。開発コンテナ自体を第三者へ公開する場合や、共有・CI・本番用途へ転用する場合は、必要性を個別に確認し、不要な設定を削除または無効化してください。本番アプリケーションの配布物には、これらの開発コンテナ設定を含めません。
+
+### 品質確認コマンド
 
 ```bash
 APP_URL=http://localhost VIEW_COMPILED_PATH=/tmp/pol-community-test-views php artisan test

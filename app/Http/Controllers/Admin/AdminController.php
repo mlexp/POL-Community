@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ImageUpload;
 use App\Support\AuditLogger;
+use App\Support\ContentSanitizer;
 use App\Support\MediaUrl;
 use App\Support\UpdateTimestamp;
 use Illuminate\Http\RedirectResponse;
@@ -36,12 +37,12 @@ class AdminController extends Controller
         ), 'headerImages' => DB::table('attachments')->whereNull('deleted_at')->where('status', 'ready')->where('visibility', 'public')->where('purpose', 'header')->latest()->get(), 'currentHeader' => DB::table('site_assets')->where('slot', 'header')->value('attachment_id'), 'currentSiteLogo' => DB::table('site_assets')->where('slot', 'site_logo')->value('attachment_id'), 'timezones' => timezone_identifiers_list()]);
     }
 
-    public function updateSettings(Request $request, AuditLogger $audit, ImageUpload $upload): RedirectResponse
+    public function updateSettings(Request $request, AuditLogger $audit, ImageUpload $upload, ContentSanitizer $sanitizer): RedirectResponse
     {
         $values = $request->validate([
             'site_title' => ['required', 'string', 'max:100'],
             'site_description' => ['nullable', 'string', 'max:500'],
-            'site_footer_text' => ['nullable', 'string', 'max:1000'],
+            'site_footer_text' => ['nullable', 'string', 'max:20000'],
             'site_timezone' => ['required', 'timezone:all'],
             'registration_enabled' => ['required', 'boolean'],
             'registration_require_admin_approval' => ['required', 'boolean'],
@@ -70,6 +71,7 @@ class AdminController extends Controller
         foreach (['registration_enabled', 'registration_require_admin_approval', 'home_header_enabled', 'community_posting_enabled', 'comments_enabled'] as $field) {
             $values[$field] = $request->boolean($field);
         }
+        $values['site_footer_text'] = $sanitizer->sanitize($values['site_footer_text'] ?? '');
         $values += ['home_character_diary_limit' => 5, 'home_community_limit' => 10, 'home_heading_announcements' => 'サイト更新情報', 'home_heading_diaries' => 'メンバー日記', 'home_heading_community' => 'コミュニティの新着', 'home_heading_feeds' => '外部RSS'];
         foreach (['home_announcement_limit', 'home_diary_limit', 'home_feed_item_limit', 'home_character_diary_limit', 'home_community_limit', 'upload_image_max_bytes'] as $field) {
             $values[$field] = (int) $values[$field];

@@ -10,8 +10,7 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: "3306"
-      # DB_DATABASE: app
-      DB_DATABASE: mlexp_app_wk
+      DB_DATABASE: app_db
       DB_USERNAME: app
       DB_PASSWORD: dev_password
     depends_on:
@@ -43,8 +42,7 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: dev_root_password
-      # MYSQL_DATABASE: app
-      MYSQL_DATABASE: mlexp_app_wk
+      MYSQL_DATABASE: app_db
       MYSQL_USER: app
       MYSQL_PASSWORD: dev_password
     volumes:

@@ -17,7 +17,7 @@ class LegacyPathResolver
         }
         if (filter_var($reference, FILTER_VALIDATE_URL)) {
             $host = strtolower((string) parse_url($reference, PHP_URL_HOST));
-            if (! in_array($host, ['www.mlexp.com', 'mlexp.com'], true)) {
+            if (! in_array($host, config('legacy.allowed_hosts', []), true)) {
                 return ['status' => 'unsupported', 'path' => null, 'relative' => null];
             }
             $reference = (string) parse_url($reference, PHP_URL_PATH);

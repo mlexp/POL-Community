@@ -20,7 +20,10 @@ class LegacyPathResolverTest extends TestCase
         File::put($this->legacyRoot.'/users/member/image/sample.jpg', 'fixture');
         $this->outsideFile = $this->legacyRoot.'-outside';
         File::put($this->outsideFile, 'fixture');
-        config(['legacy.files_root' => $this->legacyRoot]);
+        config([
+            'legacy.files_root' => $this->legacyRoot,
+            'legacy.allowed_hosts' => ['legacy.example.test'],
+        ]);
     }
 
     protected function tearDown(): void
@@ -36,10 +39,12 @@ class LegacyPathResolverTest extends TestCase
 
         $relative = $resolver->resolve('users/member/image/sample.jpg');
         $oldRoute = $resolver->resolve('/wk/users/member/image/sample.jpg');
+        $absoluteUrl = $resolver->resolve('https://legacy.example.test/wk/users/member/image/sample.jpg');
 
         $this->assertSame('present', $relative['status']);
         $this->assertSame($this->legacyRoot.'/users/member/image/sample.jpg', $relative['path']);
         $this->assertSame('present', $oldRoute['status']);
+        $this->assertSame('present', $absoluteUrl['status']);
     }
 
     public function test_it_rejects_external_urls_and_paths_outside_the_root(): void

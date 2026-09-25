@@ -180,6 +180,31 @@ class AdministrationTest extends TestCase
             ->assertSee('file:bg-zinc-800', false);
     }
 
+    public function test_admin_can_edit_and_display_a_sanitized_rich_text_footer(): void
+    {
+        $this->seed(SiteDefaultsSeeder::class);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('name="site_footer_text"', false)
+            ->assertSee('data-rich-text', false);
+
+        $this->put(route('admin.settings.update'), $this->settingsPayload([
+            'site_footer_text' => '<p><strong>運営情報</strong> <a href="https://example.com">お問い合わせ</a></p><script>alert(1)</script>',
+        ]))->assertSessionHasNoErrors();
+
+        $stored = json_decode(DB::table('site_settings')->where('key', 'site.footer_text')->value('value'), true);
+        $this->assertStringContainsString('<strong>運営情報</strong>', $stored);
+        $this->assertStringNotContainsString('<script', $stored);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('<strong>運営情報</strong>', false)
+            ->assertSee('href="https://example.com"', false)
+            ->assertDontSee('alert(1)');
+    }
+
     public function test_admin_can_set_a_site_logo_for_the_sticky_public_header(): void
     {
         $this->seed(SiteDefaultsSeeder::class);
